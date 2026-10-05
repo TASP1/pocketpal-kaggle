@@ -29,7 +29,7 @@ When the isolated shell service is live on Render:
 
 1. Deploy `ai-terminal` with `SHELL_KEY` (and no other secrets in the container env).
 2. On the **gateway**, set secrets:
-   - `SHELL_URL` = `https://<ai-terminal-service>.onrender.com`
+   - `SHELL_URL` = `https://gh-cli-for-ai-bots.onrender.com` (live v1.8.0 `/shell/exec`; dedicated `ai-terminal` service is currently suspended)`
    - `SHELL_KEY` = same key the service expects as `X-Shell-Key`
 3. Restart the gateway (`live` workflow / process).
 4. In PocketPal, enable the **Shell** chip (`KaggleCapabilityBar`) so the model
