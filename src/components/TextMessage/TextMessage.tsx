@@ -20,6 +20,8 @@ import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
+import {SourcesCard} from '../SourcesCard';
+import {prepareBridgeContent} from '../../utils/bridgeContent';
 
 import {AgentStep, MessageType} from '../../utils/types';
 import {
@@ -74,11 +76,17 @@ export const TextMessage = ({
   // authoritative source. For legacy `Text` messages, fall back to
   // `message.text`. Reasoning is rendered separately via
   // ReasoningBlock — TextMessage only owns the content side.
-  const visibleText: string = step
+  const rawVisibleText: string = step
     ? (step.content ?? '')
     : 'text' in message
       ? message.text
       : '';
+  // Strip tool-protocol echo + lift Sources into structured cards
+  // so chat matches PocketPal's polished assistant chrome.
+  const {body: visibleText, sources: bridgeSources} = React.useMemo(
+    () => prepareBridgeContent(rawVisibleText),
+    [rawVisibleText],
+  );
   const theme = useTheme();
   const user = React.useContext(UserContext);
   const [previewData, setPreviewData] = React.useState(
@@ -278,6 +286,7 @@ export const TextMessage = ({
             maxMessageWidth={messageWidth}
             selectable={false}
           />
+          <SourcesCard sources={bridgeSources} />
         </View>
       )}
 
