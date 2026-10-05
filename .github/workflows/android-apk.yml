@@ -12,12 +12,6 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'debug or release'
-        default: debug
-        type: choice
-        options: [debug, release]
 
 concurrency:
   group: apk-${{ github.ref }}
@@ -51,7 +45,7 @@ jobs:
       - name: Gradle setup
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: false
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Assemble debug APK
         working-directory: android
@@ -66,46 +60,3 @@ jobs:
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
-
-  apk-release:
-    name: Build signed release APK
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    env:
-      RNLLAMA_SKIP_POSTINSTALL: '1'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: gradle
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: yarn
-      - run: yarn install --frozen-lockfile
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Decode keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-          echo "KEYSTORE_READY=1" >> "$GITHUB_ENV"
-      - name: Assemble release
-        if: env.KEYSTORE_READY == '1'
-        working-directory: android
-        env:
-          MYAPP_UPLOAD_STORE_FILE: release.keystore
-          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --build-cache --parallel --stacktrace
-      - uses: actions/upload-artifact@v4
-        if: env.KEYSTORE_READY == '1'
-        with:
-          name: pocketpal-kaggle-release-${{ github.sha }}
-          path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 30
