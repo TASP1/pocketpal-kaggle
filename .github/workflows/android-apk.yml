@@ -1,4 +1,4 @@
-name: Android APK (Blacksmith)
+name: Android APK
 
 on:
   push:
@@ -12,6 +12,15 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      runner:
+        description: "Runner (cheap after warm cache; blacksmith-8vcpu for cold/fast)"
+        type: choice
+        options:
+          - ubuntu-24.04
+          - blacksmith-8vcpu-ubuntu-2404
+          - blacksmith-2vcpu-ubuntu-2404
+        default: ubuntu-24.04
 
 concurrency:
   group: apk-${{ github.ref }}
@@ -20,13 +29,13 @@ concurrency:
 jobs:
   apk-debug:
     name: Build prod debug APK
-    # Blacksmith 8 vCPU / 32 GB / 160 GB — faster CPUs + more RAM for NDK/CMake
-    # App installed on TASP1 (blacksmith-sh), repository_selection: all
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    # Default: GitHub-hosted (free on public repo) — warm Gradle/yarn cache from prior Blacksmith run
+    # Manual: pick blacksmith-8vcpu for fastest cold rebuild
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
     timeout-minutes: 90
     env:
       RNLLAMA_SKIP_POSTINSTALL: '1'
-      GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs=-Xmx6g'
+      GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs=-Xmx4g'
     steps:
       - uses: actions/checkout@v4
 
@@ -96,7 +105,6 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # prodDebug only — skips e2e flavor; still has google-services for safety
       - name: Assemble prod debug APK
         working-directory: android
         run: |
